@@ -1,5 +1,5 @@
 import { Tabs } from "expo-router";
-import { LayoutGrid, Car, ShieldAlert, CloudSun, History } from "lucide-react-native";
+import { LayoutGrid, Car, ShieldAlert, CloudSun, History, Gauge } from "lucide-react-native";
 import React from "react";
 import { Platform, View, StyleSheet } from "react-native";
 import { BlurView } from "expo-blur";
@@ -42,9 +42,20 @@ export default function TabLayout() {
         name="index"
         options={{
           title: "Home",
-          tabBarIcon: ({ color, size, focused }) => (
+          tabBarIcon: ({ color, focused }) => (
             <View style={[styles.iconContainer, focused && styles.activeIcon]}>
               <LayoutGrid color={focused ? "#fff" : color} size={28} />
+            </View>
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="drive"
+        options={{
+          title: "Drive",
+          tabBarIcon: ({ color, focused }) => (
+            <View style={[styles.iconContainer, focused && styles.activeIconCyan]}>
+              <Gauge color={focused ? "#fff" : color} size={28} />
             </View>
           ),
         }}
@@ -53,7 +64,7 @@ export default function TabLayout() {
         name="vehicle"
         options={{
           title: "Vehicle",
-          tabBarIcon: ({ color, size, focused }) => (
+          tabBarIcon: ({ color, focused }) => (
             <View style={[styles.iconContainer, focused && styles.activeIcon]}>
               <Car color={focused ? "#fff" : color} size={28} />
             </View>
@@ -64,7 +75,7 @@ export default function TabLayout() {
         name="trips"
         options={{
           title: "Trips",
-          tabBarIcon: ({ color, size, focused }) => (
+          tabBarIcon: ({ color, focused }) => (
             <View style={[styles.iconContainer, focused && styles.activeIcon]}>
               <History color={focused ? "#fff" : color} size={28} />
             </View>
@@ -75,7 +86,7 @@ export default function TabLayout() {
         name="emergency"
         options={{
           title: "Emergency",
-          tabBarIcon: ({ color, size, focused }) => (
+          tabBarIcon: ({ color, focused }) => (
             <View style={[styles.iconContainer, focused && styles.activeIcon]}>
               <ShieldAlert color={focused ? "#fff" : color} size={28} />
             </View>
@@ -86,7 +97,7 @@ export default function TabLayout() {
         name="weather"
         options={{
           title: "Weather",
-          tabBarIcon: ({ color, size, focused }) => (
+          tabBarIcon: ({ color, focused }) => (
             <View style={[styles.iconContainer, focused && styles.activeIcon]}>
               <CloudSun color={focused ? "#fff" : color} size={28} />
             </View>
@@ -114,6 +125,17 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.3,
     shadowRadius: 8,
+    elevation: 8,
+  },
+  activeIconCyan: {
+    backgroundColor: '#00D4FF',
+    shadowColor: "#00D4FF",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
     elevation: 8,
   }
 });
