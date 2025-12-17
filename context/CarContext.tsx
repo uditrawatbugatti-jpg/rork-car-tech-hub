@@ -66,24 +66,24 @@ export interface FuelLog {
 }
 
 export const [CarContext, useCar] = createContextHook(() => {
-  // Vehicle Profile - Honda Amaze 2013
+  // Vehicle Profile - Honda Amaze 2013 i-VTEC Petrol
   const [vehicleProfile] = useState<VehicleProfile>({
     make: "Honda",
     model: "Amaze",
     year: 2013,
-    variant: "1.5 S MT i-DTEC",
-    engine: "1.5L i-DTEC Diesel",
+    variant: "1.2 S MT i-VTEC",
+    engine: "1.2L i-VTEC Petrol",
     transmission: "5-Speed Manual",
-    fuelType: "Diesel",
-    power: "99 bhp @ 3600 rpm",
-    torque: "200 Nm @ 1750 rpm",
-    mileage: "25.8 km/l",
+    fuelType: "Petrol",
+    power: "87 bhp @ 6000 rpm",
+    torque: "109 Nm @ 4500 rpm",
+    mileage: "18.0 km/l",
     tankCapacity: 35,
     color: "Urban Titanium Metallic",
     vin: "MAHCM165XDM******",
     licensePlate: "MH 02 XX 1234",
     odometer: 67432,
-    imageUrl: "https://imgd.aeplcdn.com/664x374/n/cw/ec/34137/amaze-exterior-right-front-three-quarter-2.jpeg",
+    imageUrl: "https://images.unsplash.com/photo-1609521263047-f8f205293f24?w=800&auto=format&fit=crop&q=80",
   });
 
   // Speed and RPM
