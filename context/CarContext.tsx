@@ -83,7 +83,7 @@ export const [CarContext, useCar] = createContextHook(() => {
     vin: "MAHCM165XDM******",
     licensePlate: "MH 02 XX 1234",
     odometer: 67432,
-    imageUrl: "https://images.unsplash.com/photo-1609521263047-f8f205293f24?w=800&auto=format&fit=crop&q=80",
+    imageUrl: "https://imgd.aeplcdn.com/664x374/n/cw/ec/24017/amaze-exterior-right-front-three-quarter-3.jpeg?q=80",
   });
 
   // Speed and RPM

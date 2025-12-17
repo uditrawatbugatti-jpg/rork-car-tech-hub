@@ -175,19 +175,40 @@ export default function VehicleScreen() {
           <View style={styles.profileContainer}>
             <View style={styles.carShowcase}>
               <LinearGradient
-                colors={["rgba(59, 130, 246, 0.08)", "rgba(16, 185, 129, 0.05)", "transparent"]}
-                style={styles.carGlow}
+                colors={["transparent", "rgba(12, 12, 12, 0.3)", "rgba(12, 12, 12, 0.95)", "#0C0C0C"]}
+                style={styles.carImageOverlay}
                 start={{ x: 0.5, y: 0 }}
                 end={{ x: 0.5, y: 1 }}
+                locations={[0, 0.4, 0.85, 1]}
+              />
+              <LinearGradient
+                colors={["#0C0C0C", "rgba(12, 12, 12, 0.8)", "transparent"]}
+                style={styles.carImageOverlayLeft}
+                start={{ x: 0, y: 0.5 }}
+                end={{ x: 1, y: 0.5 }}
+              />
+              <LinearGradient
+                colors={["transparent", "rgba(12, 12, 12, 0.8)", "#0C0C0C"]}
+                style={styles.carImageOverlayRight}
+                start={{ x: 0, y: 0.5 }}
+                end={{ x: 1, y: 0.5 }}
               />
               <Image 
                 source={{ uri: vehicleProfile.imageUrl }} 
                 style={styles.carImage}
-                resizeMode="contain"
+                resizeMode="cover"
               />
               <View style={styles.carBadge}>
-                <Text style={styles.carBadgeText}>{vehicleProfile.year}</Text>
+                <LinearGradient
+                  colors={["#3B82F6", "#1D4ED8"]}
+                  style={styles.carBadgeGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <Text style={styles.carBadgeText}>{vehicleProfile.year}</Text>
+                </LinearGradient>
               </View>
+              <View style={styles.carReflection} />
             </View>
 
             <View style={styles.carNameSection}>
@@ -532,8 +553,10 @@ const styles = StyleSheet.create({
   carShowcase: {
     alignItems: 'center',
     justifyContent: 'center',
-    height: 200,
+    height: 220,
     position: 'relative',
+    marginHorizontal: -20,
+    overflow: 'hidden',
   },
   carGlow: {
     position: 'absolute',
@@ -541,25 +564,66 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    borderRadius: 24,
   },
   carImage: {
-    width: width - 60,
-    height: 180,
+    width: width,
+    height: 200,
+  },
+  carImageOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 1,
+  },
+  carImageOverlayLeft: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: 60,
+    bottom: 0,
+    zIndex: 1,
+  },
+  carImageOverlayRight: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 60,
+    bottom: 0,
+    zIndex: 1,
   },
   carBadge: {
     position: 'absolute',
-    top: 10,
-    right: 10,
-    backgroundColor: 'rgba(59, 130, 246, 0.9)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
+    top: 16,
+    right: 30,
+    zIndex: 2,
+    borderRadius: 10,
+    overflow: 'hidden',
+    shadowColor: '#3B82F6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  carBadgeGradient: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
   },
   carBadgeText: {
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 14,
+    letterSpacing: 0.5,
+  },
+  carReflection: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 40,
+    backgroundColor: 'transparent',
+    zIndex: 2,
   },
   carNameSection: {
     flexDirection: 'row',
