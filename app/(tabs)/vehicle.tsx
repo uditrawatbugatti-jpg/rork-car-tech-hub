@@ -23,6 +23,7 @@ import {
 } from "lucide-react-native";
 
 import { useCar } from "@/context/CarContext";
+import { VehicleHeroBlend } from "@/components/VehicleHeroBlend";
 
 const { width } = Dimensions.get("window");
 
@@ -173,43 +174,11 @@ export default function VehicleScreen() {
       >
         {activeTab === 'profile' && (
           <View style={styles.profileContainer}>
-            <View style={styles.carShowcase}>
-              <LinearGradient
-                colors={["transparent", "rgba(12, 12, 12, 0.3)", "rgba(12, 12, 12, 0.95)", "#0C0C0C"]}
-                style={styles.carImageOverlay}
-                start={{ x: 0.5, y: 0 }}
-                end={{ x: 0.5, y: 1 }}
-                locations={[0, 0.4, 0.85, 1]}
-              />
-              <LinearGradient
-                colors={["#0C0C0C", "rgba(12, 12, 12, 0.8)", "transparent"]}
-                style={styles.carImageOverlayLeft}
-                start={{ x: 0, y: 0.5 }}
-                end={{ x: 1, y: 0.5 }}
-              />
-              <LinearGradient
-                colors={["transparent", "rgba(12, 12, 12, 0.8)", "#0C0C0C"]}
-                style={styles.carImageOverlayRight}
-                start={{ x: 0, y: 0.5 }}
-                end={{ x: 1, y: 0.5 }}
-              />
-              <Image 
-                source={{ uri: vehicleProfile.imageUrl }} 
-                style={styles.carImage}
-                resizeMode="cover"
-              />
-              <View style={styles.carBadge}>
-                <LinearGradient
-                  colors={["#3B82F6", "#1D4ED8"]}
-                  style={styles.carBadgeGradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                >
-                  <Text style={styles.carBadgeText}>{vehicleProfile.year}</Text>
-                </LinearGradient>
-              </View>
-              <View style={styles.carReflection} />
-            </View>
+            <VehicleHeroBlend
+              outsideTemp={32}
+              cabinTemp={undefined}
+              calamityAlert={{ type: "none", message: "All Clear" }}
+            />
 
             <View style={styles.carNameSection}>
               <View style={styles.hondaLogo}>
