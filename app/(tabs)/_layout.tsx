@@ -1,5 +1,5 @@
 import { Tabs } from "expo-router";
-import { LayoutGrid, Car, ShieldAlert, CloudSun } from "lucide-react-native";
+import { LayoutGrid, Car, ShieldAlert, CloudSun, History } from "lucide-react-native";
 import React from "react";
 import { Platform, View, StyleSheet } from "react-native";
 import { BlurView } from "expo-blur";
@@ -56,6 +56,17 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size, focused }) => (
             <View style={[styles.iconContainer, focused && styles.activeIcon]}>
               <Car color={focused ? "#fff" : color} size={28} />
+            </View>
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="trips"
+        options={{
+          title: "Trips",
+          tabBarIcon: ({ color, size, focused }) => (
+            <View style={[styles.iconContainer, focused && styles.activeIcon]}>
+              <History color={focused ? "#fff" : color} size={28} />
             </View>
           ),
         }}
