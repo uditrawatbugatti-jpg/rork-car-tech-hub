@@ -3,6 +3,25 @@ import { useState, useEffect } from "react";
 
 export type DriveMode = "COMFORT" | "SPORT" | "ECO";
 
+export interface VehicleProfile {
+  make: string;
+  model: string;
+  year: number;
+  variant: string;
+  engine: string;
+  transmission: string;
+  fuelType: string;
+  power: string;
+  torque: string;
+  mileage: string;
+  tankCapacity: number;
+  color: string;
+  vin: string;
+  licensePlate: string;
+  odometer: number;
+  imageUrl: string;
+}
+
 export interface TPMSData {
   fl: number;
   fr: number;
@@ -47,6 +66,26 @@ export interface FuelLog {
 }
 
 export const [CarContext, useCar] = createContextHook(() => {
+  // Vehicle Profile - Honda Amaze 2013
+  const [vehicleProfile] = useState<VehicleProfile>({
+    make: "Honda",
+    model: "Amaze",
+    year: 2013,
+    variant: "1.5 S MT i-DTEC",
+    engine: "1.5L i-DTEC Diesel",
+    transmission: "5-Speed Manual",
+    fuelType: "Diesel",
+    power: "99 bhp @ 3600 rpm",
+    torque: "200 Nm @ 1750 rpm",
+    mileage: "25.8 km/l",
+    tankCapacity: 35,
+    color: "Urban Titanium Metallic",
+    vin: "MAHCM165XDM******",
+    licensePlate: "MH 02 XX 1234",
+    odometer: 67432,
+    imageUrl: "https://imgd.aeplcdn.com/664x374/n/cw/ec/34137/amaze-exterior-right-front-three-quarter-2.jpeg",
+  });
+
   // Speed and RPM
   const [speed, setSpeed] = useState(0);
   const [rpm, setRpm] = useState(0);
@@ -194,6 +233,7 @@ export const [CarContext, useCar] = createContextHook(() => {
   };
 
   return {
+    vehicleProfile,
     speed,
     rpm,
     gear,
