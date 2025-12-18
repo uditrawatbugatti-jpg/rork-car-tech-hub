@@ -15,7 +15,10 @@ import {
   Battery,
   Fuel,
   Clock,
+  Navigation,
 } from 'lucide-react-native';
+import MapView, { PROVIDER_GOOGLE, Polyline } from 'react-native-maps';
+import * as Location from 'expo-location';
 
 import { useCar } from '@/context/CarContext';
 import { GaugeArc } from '@/components/drive/GaugeArc';
@@ -31,6 +34,121 @@ import {
 const { width } = Dimensions.get('window');
 const GAUGE_SIZE = Math.min(width * 0.45, 280); // Two gauges side by side-ish
 const CAR_IMAGE_URL = "https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/x4qaew12odomt5x8vik4h";
+
+// Dark Mode Map Style for "Cockpit" feel
+const DARK_MAP_STYLE = [
+  {
+    "elementType": "geometry",
+    "stylers": [{ "color": "#212121" }]
+  },
+  {
+    "elementType": "labels.icon",
+    "stylers": [{ "visibility": "off" }]
+  },
+  {
+    "elementType": "labels.text.fill",
+    "stylers": [{ "color": "#757575" }]
+  },
+  {
+    "elementType": "labels.text.stroke",
+    "stylers": [{ "color": "#212121" }]
+  },
+  {
+    "featureType": "administrative",
+    "elementType": "geometry",
+    "stylers": [{ "color": "#757575" }]
+  },
+  {
+    "featureType": "administrative.country",
+    "elementType": "labels.text.fill",
+    "stylers": [{ "color": "#9e9e9e" }]
+  },
+  {
+    "featureType": "administrative.land_parcel",
+    "stylers": [{ "visibility": "off" }]
+  },
+  {
+    "featureType": "administrative.locality",
+    "elementType": "labels.text.fill",
+    "stylers": [{ "color": "#bdbdbd" }]
+  },
+  {
+    "featureType": "poi",
+    "elementType": "labels.text.fill",
+    "stylers": [{ "color": "#757575" }]
+  },
+  {
+    "featureType": "poi.park",
+    "elementType": "geometry",
+    "stylers": [{ "color": "#181818" }]
+  },
+  {
+    "featureType": "poi.park",
+    "elementType": "labels.text.fill",
+    "stylers": [{ "color": "#616161" }]
+  },
+  {
+    "featureType": "poi.park",
+    "elementType": "labels.text.stroke",
+    "stylers": [{ "color": "#1b1b1b" }]
+  },
+  {
+    "featureType": "road",
+    "elementType": "geometry.fill",
+    "stylers": [{ "color": "#2c2c2c" }]
+  },
+  {
+    "featureType": "road",
+    "elementType": "labels.text.fill",
+    "stylers": [{ "color": "#8a8a8a" }]
+  },
+  {
+    "featureType": "road.arterial",
+    "elementType": "geometry",
+    "stylers": [{ "color": "#373737" }]
+  },
+  {
+    "featureType": "road.highway",
+    "elementType": "geometry",
+    "stylers": [{ "color": "#3c3c3c" }]
+  },
+  {
+    "featureType": "road.highway.controlled_access",
+    "elementType": "geometry",
+    "stylers": [{ "color": "#4e4e4e" }]
+  },
+  {
+    "featureType": "road.local",
+    "elementType": "labels.text.fill",
+    "stylers": [{ "color": "#616161" }]
+  },
+  {
+    "featureType": "transit",
+    "elementType": "labels.text.fill",
+    "stylers": [{ "color": "#757575" }]
+  },
+  {
+    "featureType": "water",
+    "elementType": "geometry",
+    "stylers": [{ "color": "#000000" }]
+  },
+  {
+    "featureType": "water",
+    "elementType": "labels.text.fill",
+    "stylers": [{ "color": "#3d3d3d" }]
+  }
+];
+
+// Mock Route Data (Simulated Path)
+const MOCK_ROUTE_COORDS = [
+  { latitude: 37.7749, longitude: -122.4194 },
+  { latitude: 37.7755, longitude: -122.4200 },
+  { latitude: 37.7765, longitude: -122.4210 },
+  { latitude: 37.7775, longitude: -122.4225 },
+  { latitude: 37.7785, longitude: -122.4240 },
+  { latitude: 37.7800, longitude: -122.4260 },
+  { latitude: 37.7820, longitude: -122.4290 },
+];
 
 // Standard "Bracket" gauge angles (Clockwise from 12 o'clock)
 // Left Gauge (Speed): Starts at ~7 o'clock (210deg) and ends at ~11 o'clock (330deg)
@@ -60,7 +178,10 @@ export default function DriveScreen() {
   const [time, setTime] = useState(new Date());
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
+  const [showMap, setShowMap] = useState(true); // Default to map enabled
+  const [location, setLocation] = useState<Location.LocationObject | null>(null);
 
+  const mapRef = useRef<MapView>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
 
@@ -90,6 +211,35 @@ export default function DriveScreen() {
   }, []);
 
   useEffect(() => {
+    (async () => {
+      if (Platform.OS !== 'web') {
+        let { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          console.log('Permission to access location was denied');
+          return;
+        }
+
+        let location = await Location.getCurrentPositionAsync({});
+        setLocation(location);
+      } else {
+        // Mock location for web to show SF
+        setLocation({
+           coords: {
+             latitude: 37.7749,
+             longitude: -122.4194,
+             altitude: 0,
+             accuracy: 0,
+             altitudeAccuracy: 0,
+             heading: 0,
+             speed: 0,
+           },
+           timestamp: Date.now(),
+        });
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
     // Alert logic
     if (coolantStatus === 'critical') {
       setAlertMessage('ENGINE OVERHEAT');
@@ -111,23 +261,73 @@ export default function DriveScreen() {
     <View style={styles.container}>
       <StatusBar style="light" hidden />
       
-      {/* Premium Gradient Background */}
-      <LinearGradient
-        colors={['#020617', '#0F172A', '#172554', '#020617']}
-        locations={[0, 0.4, 0.8, 1]}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
-        style={styles.background}
-      />
-
-      {/* Grid Pattern Overlay */}
-      <View style={styles.gridOverlay}>
-        <View style={styles.horizonLine} />
+      {/* Premium Gradient Background - Conditional if Map is off */}
+      {!showMap && (
         <LinearGradient
-          colors={['transparent', 'rgba(59, 130, 246, 0.1)', 'transparent']}
-          style={styles.floorGradient}
+          colors={['#020617', '#0F172A', '#172554', '#020617']}
+          locations={[0, 0.4, 0.8, 1]}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          style={styles.background}
         />
-      </View>
+      )}
+
+      {/* Map Background Layer */}
+      {showMap && location && (
+        <View style={StyleSheet.absoluteFill}>
+          <MapView
+            ref={mapRef}
+            provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
+            style={StyleSheet.absoluteFill}
+            customMapStyle={DARK_MAP_STYLE}
+            initialRegion={{
+              latitude: location.coords.latitude,
+              longitude: location.coords.longitude,
+              latitudeDelta: 0.01,
+              longitudeDelta: 0.01,
+            }}
+            showsUserLocation={true}
+            followsUserLocation={true}
+            showsCompass={false}
+            showsPointsOfInterest={false}
+            showsTraffic={false} // Keep it clean
+            pitchEnabled={false}
+            rotateEnabled={true}
+          >
+             {/* Simulated Navigation Route */}
+             <Polyline
+                coordinates={MOCK_ROUTE_COORDS}
+                strokeColor="#3B82F6"
+                strokeWidth={4}
+             />
+          </MapView>
+          {/* Vignette Overlay to darken edges for gauges */}
+          <LinearGradient
+             colors={['rgba(2,6,23,0.9)', 'rgba(2,6,23,0.3)', 'rgba(2,6,23,0.3)', 'rgba(2,6,23,0.9)']}
+             locations={[0, 0.25, 0.75, 1]}
+             style={StyleSheet.absoluteFill}
+             pointerEvents="none"
+          />
+          <LinearGradient
+             colors={['rgba(2,6,23,0.9)', 'transparent', 'rgba(2,6,23,0.9)']}
+             start={{ x: 0, y: 0 }}
+             end={{ x: 1, y: 0 }}
+             style={StyleSheet.absoluteFill}
+             pointerEvents="none"
+          />
+        </View>
+      )}
+
+      {/* Grid Pattern Overlay - Only if no map or faint on map */}
+      {!showMap && (
+        <View style={styles.gridOverlay}>
+          <View style={styles.horizonLine} />
+          <LinearGradient
+            colors={['transparent', 'rgba(59, 130, 246, 0.1)', 'transparent']}
+            style={styles.floorGradient}
+          />
+        </View>
+      )}
 
       <Animated.View style={[styles.content, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
         
@@ -136,6 +336,12 @@ export default function DriveScreen() {
            <View style={styles.headerItem}>
              <Clock size={16} color="#94A3B8" />
              <Text style={styles.headerText}>{formatTime(time)}</Text>
+           </View>
+
+           {/* Toggle Map Button */}
+           <View style={styles.mapToggle} onTouchEnd={() => setShowMap(!showMap)}>
+              <Text style={[styles.navText, showMap && styles.navTextActive]}>NAV</Text>
+              {showMap && <View style={styles.navIndicator} />}
            </View>
            
            <View style={styles.alertZone}>
@@ -179,14 +385,26 @@ export default function DriveScreen() {
              </View>
           </View>
 
-          {/* Center: Car Visualization */}
+          {/* Center: Car Visualization (Hidden or Dimmed in Map Mode? No, keep it but maybe smaller or just overlaid) */}
           <View style={styles.centerStage}>
-             <View style={styles.carGlow} />
-             <Image 
-                source={{ uri: CAR_IMAGE_URL }} 
-                style={styles.centerCarImage}
-                resizeMode="contain"
-             />
+             {/* If map is shown, we might want to hide the car or show a navigation arrow instead. 
+                 For now, let's keep the car but maybe remove the glow/bg to let map show through */}
+             
+             {!showMap && <View style={styles.carGlow} />}
+             
+             {showMap ? (
+                <View style={styles.navOverlay}>
+                  <Navigation size={48} color="#3B82F6" style={{ marginBottom: 20 }} />
+                  <Text style={styles.navInstruction}>Turn Right 200m</Text>
+                  <Text style={styles.navRoad}>Main Street</Text>
+                </View>
+             ) : (
+               <Image 
+                  source={{ uri: CAR_IMAGE_URL }} 
+                  style={styles.centerCarImage}
+                  resizeMode="contain"
+               />
+             )}
              
              {/* Dynamic Drive Info under car */}
              <View style={styles.driveInfo}>
@@ -309,6 +527,50 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
     alignItems: 'center',
+  },
+  mapToggle: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 20,
+  },
+  navText: {
+    color: '#64748B',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  navTextActive: {
+    color: '#3B82F6',
+  },
+  navIndicator: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#3B82F6',
+    marginTop: 2,
+  },
+  navOverlay: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 40,
+    backgroundColor: 'rgba(2, 6, 23, 0.6)',
+    padding: 20,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(59, 130, 246, 0.3)',
+  },
+  navInstruction: {
+    color: '#F8FAFC',
+    fontSize: 20,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginTop: 10,
+  },
+  navRoad: {
+    color: '#94A3B8',
+    fontSize: 14,
+    fontWeight: '500',
+    marginTop: 4,
   },
   cockpit: {
     flex: 1,
