@@ -6,658 +6,585 @@ import {
   TouchableOpacity,
   Dimensions,
   Image,
-  ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { LinearGradient } from "expo-linear-gradient";
+import { BlurView } from "expo-blur";
 import {
-  Phone,
-  Settings,
-  Grid,
-  Radio,
-  Navigation,
-  Mic,
-  Calendar,
-  MessageSquare,
-  Chrome,
-  Youtube,
-  Play,
-  SkipForward,
-  SkipBack,
   Wifi,
-  Bluetooth,
+  Signal,
   Battery,
   Cloud,
-  ShieldAlert,
+  MapPin,
+  AlertTriangle,
+  Siren,
+  Camera,
+  Menu,
+  Music,
+  Phone,
+  Settings,
+  X,
   Car,
+  Navigation,
+  ShieldAlert
 } from "lucide-react-native";
 import { useCar } from "@/context/CarContext";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import Animated, { 
+  FadeIn, 
+  FadeOut, 
+  SlideInDown, 
+  SlideOutDown,
+} from "react-native-reanimated";
 
 const { width } = Dimensions.get("window");
 
-export default function LauncherScreen() {
-  const { speed, driveMode, range, isTripActive, drivingScore, rpm } = useCar();
+export default function AndroidStereoScreen() {
+  const { 
+    speed, 
+    tpms, 
+    coolantTemp, 
+    fuelLevel, 
+    range 
+  } = useCar();
+
   const [time, setTime] = useState(new Date());
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [activeAlert, setActiveAlert] = useState<string | null>("Heavy Rain Alert");
+
+  // Mock Radar/Camera Data
+  const [speedLimit] = useState(60);
+  const [distToCamera] = useState(450); // meters
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
-    return () => clearInterval(timer);
+    // Simulate active alert clearing after some time for demo
+    const alertTimer = setTimeout(() => setActiveAlert(null), 5000);
+    return () => {
+      clearInterval(timer);
+      clearTimeout(alertTimer);
+    };
   }, []);
 
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString([], {
-      weekday: "long",
-      month: "long",
-      day: "numeric",
-    });
-  };
-
-  const QuickAppTile = ({
-    icon: Icon,
-    color,
-    label,
-    onPress,
-  }: {
-    icon: any;
-    color: string;
-    label: string;
-    onPress?: () => void;
-  }) => (
-    <TouchableOpacity
-      style={[styles.appTile]}
-      onPress={onPress}
-      activeOpacity={0.7}
-    >
-       <LinearGradient
-            colors={["rgba(30, 41, 59, 0.6)", "rgba(15, 23, 42, 0.8)"]}
-            style={styles.appTileGradient}
-        >
-        <View style={[styles.iconCircle, { backgroundColor: `${color}20` }]}>
-            <Icon size={28} color={color} />
-        </View>
-        <Text style={styles.appLabel}>{label}</Text>
-      </LinearGradient>
-    </TouchableOpacity>
-  );
+  const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 
   return (
     <View style={styles.container}>
-      <StatusBar style="light" />
-      <LinearGradient
-        colors={["#0F172A", "#020617", "#000000"]}
-        style={styles.background}
-      />
+      <StatusBar style="light" hidden />
+      
+      {/* Background Map - Simulating Live Traffic */}
+      <View style={styles.mapLayer}>
+        <Image
+          source={{
+            uri: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1080&auto=format&fit=crop",
+          }}
+          style={styles.mapImage}
+          resizeMode="cover"
+        />
+        <View style={styles.mapOverlay} />
+      </View>
 
-      {/* Top Status Bar */}
-      <SafeAreaView edges={["top"]} style={styles.header}>
-        <View style={styles.clockContainer}>
-          <Text style={styles.timeText}>{formatTime(time)}</Text>
-          <Text style={styles.dateText}>{formatDate(time)}</Text>
-        </View>
-
-        <View style={styles.statusContainer}>
-          <View style={styles.weatherPill}>
-            <Cloud size={16} color="#CBD5E1" />
-            <Text style={styles.statusText}>28°C</Text>
+      {/* Top HUD Area */}
+      <SafeAreaView style={styles.hudContainer} edges={['top', 'left', 'right']}>
+        
+        {/* Top Bar: Weather & Connectivity */}
+        <View style={styles.topBar}>
+          <View style={styles.topLeftGroup}>
+            <TouchableOpacity onPress={toggleMenu} style={styles.iconButton}>
+               <Menu size={24} color="#fff" />
+            </TouchableOpacity>
+            <View style={styles.weatherWidget}>
+              <Cloud size={20} color="#fff" />
+              <Text style={styles.weatherText}>24°C • Cloudy</Text>
+            </View>
           </View>
-          <View style={styles.statusIcons}>
+
+          <View style={styles.clockWidget}>
+            <Text style={styles.clockText}>{formatTime(time)}</Text>
+          </View>
+
+          <View style={styles.connectivityWidget}>
             <Wifi size={18} color="#fff" />
-            <Bluetooth size={18} color="#fff" />
+            <Signal size={18} color="#fff" />
             <Battery size={18} color="#fff" />
           </View>
         </View>
+
+        {/* Navigation Instruction (Center Top) */}
+        <View style={styles.navInstruction}>
+           <View style={styles.navIconBox}>
+              <Navigation size={32} color="#fff" />
+           </View>
+           <View>
+              <Text style={styles.navDistance}>200m</Text>
+              <Text style={styles.navStreet}>Turn right onto MG Road</Text>
+           </View>
+        </View>
+
       </SafeAreaView>
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.mainGrid}>
-          {/* Main Map Widget - Spans full width */}
-          <Animated.View
-            entering={FadeInDown.delay(100).duration(600)}
-            style={styles.largeWidget}
-          >
-            <LinearGradient
-              colors={["rgba(59, 130, 246, 0.1)", "rgba(30, 41, 59, 0.4)"]}
-              style={styles.widgetGradient}
-            >
-              <View style={styles.mapContainer}>
-                {/* Mock Map View */}
-                <Image
-                  source={{
-                    uri: "https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=1000&auto=format&fit=crop",
-                  }}
-                  style={styles.mapImage}
+      {/* Main Content Area (Absolute Positioning for HUD elements) */}
+      
+      {/* LEFT: TPMS Widget (Always Visible) */}
+      <View style={styles.leftWidget}>
+        <BlurView intensity={30} tint="dark" style={styles.glassPanel}>
+            <View style={styles.widgetHeader}>
+                <Car size={16} color="#94A3B8" />
+                <Text style={styles.widgetTitle}>TPMS</Text>
+            </View>
+            <View style={styles.tpmsGrid}>
+                <Text style={styles.tpmsText}>FL {tpms.fl}</Text>
+                <Text style={styles.tpmsText}>FR {tpms.fr}</Text>
+                <Image 
+                    source={{ uri: "https://cdn-icons-png.flaticon.com/512/3202/3202926.png" }} 
+                    style={{ width: 40, height: 60, opacity: 0.5, tintColor: 'white' }}
+                    resizeMode="contain"
                 />
-                
-                {/* Navigation Directions */}
-                <View style={styles.navOverlay}>
-                  <View style={styles.nextTurn}>
-                    <View style={styles.turnIconBg}>
-                        <Navigation size={28} color="#fff" />
-                    </View>
-                    <View>
-                      <Text style={styles.turnDist}>200m</Text>
-                      <Text style={styles.turnText}>Turn right onto Bandra-Worli Sea Link</Text>
-                    </View>
-                  </View>
-                </View>
+                <Text style={styles.tpmsText}>RL {tpms.rl}</Text>
+                <Text style={styles.tpmsText}>RR {tpms.rr}</Text>
+            </View>
+        </BlurView>
+      </View>
 
-                {/* Radarbot Alert Overlay (Simulated) */}
-                <View style={styles.radarAlert}>
-                  <View style={styles.radarIconBg}>
-                    <ShieldAlert size={18} color="#fff" />
-                  </View>
-                  <View>
-                    <Text style={styles.radarTitle}>Speed Cam</Text>
-                    <Text style={styles.radarDist}>500m • Limit 60</Text>
-                  </View>
+      {/* RIGHT: Radar/Camera Widget (Always Visible) */}
+      <View style={styles.rightWidget}>
+         <BlurView intensity={30} tint="dark" style={styles.glassPanel}>
+            <View style={styles.widgetHeader}>
+                <ShieldAlert size={16} color="#F87171" />
+                <Text style={[styles.widgetTitle, { color: '#F87171' }]}>RADAR</Text>
+            </View>
+            <View style={styles.radarContent}>
+                <View style={styles.speedLimitBox}>
+                    <View style={styles.speedLimitCircle}>
+                        <Text style={styles.limitText}>{speedLimit}</Text>
+                    </View>
+                    <Text style={styles.limitLabel}>LIMIT</Text>
                 </View>
-              </View>
-            </LinearGradient>
+                <View style={styles.cameraAlert}>
+                    <Camera size={24} color="#FBBF24" />
+                    <Text style={styles.cameraDist}>{distToCamera}m</Text>
+                </View>
+            </View>
+         </BlurView>
+      </View>
+
+      {/* CENTER BOTTOM: Speedometer (Minimal) */}
+      <View style={styles.centerSpeed}>
+          <Text style={styles.currentSpeed}>{Math.round(speed)}</Text>
+          <Text style={styles.speedUnit}>km/h</Text>
+      </View>
+
+      {/* EMERGENCY ALERT OVERLAY (Conditional) */}
+      {activeAlert && (
+          <Animated.View entering={FadeIn} exiting={FadeOut} style={styles.emergencyBanner}>
+              <LinearGradient
+                colors={['#EF4444', '#B91C1C']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.emergencyGradient}
+              >
+                  <Siren size={32} color="#fff" />
+                  <View style={styles.emergencyTextContainer}>
+                      <Text style={styles.emergencyTitle}>EMERGENCY ALERT</Text>
+                      <Text style={styles.emergencyDesc}>{activeAlert}</Text>
+                  </View>
+                  <TouchableOpacity onPress={() => setActiveAlert(null)} style={styles.dismissBtn}>
+                      <X size={24} color="#fff" />
+                  </TouchableOpacity>
+              </LinearGradient>
           </Animated.View>
+      )}
 
-          {/* Row 1: Dashboard Stats & Music */}
-          <View style={styles.row}>
-            {/* Speed & Drive Mode */}
-            <Animated.View
-              entering={FadeInDown.delay(200).duration(600)}
-              style={[styles.mediumWidget, { flex: 1.2 }]}
-            >
-               <LinearGradient
-                colors={["rgba(16, 185, 129, 0.1)", "rgba(30, 41, 59, 0.6)"]}
-                style={[styles.widgetGradient]}
-              >
-                <View style={styles.speedHeader}>
-                    <Text style={styles.driveMode}>{driveMode}</Text>
-                    <Car size={16} color="#94A3B8" />
+
+      {/* FULL SCREEN MENU OVERLAY */}
+      {isMenuOpen && (
+        <Animated.View 
+            entering={SlideInDown.springify()} 
+            exiting={SlideOutDown} 
+            style={styles.menuOverlay}
+        >
+            <BlurView intensity={90} tint="dark" style={StyleSheet.absoluteFill} />
+            <SafeAreaView style={styles.menuContent}>
+                <View style={styles.menuTitleRow}>
+                    <Text style={styles.menuHeader}>Apps & Controls</Text>
+                    <TouchableOpacity onPress={toggleMenu} style={styles.closeMenuBtn}>
+                        <X size={28} color="#fff" />
+                    </TouchableOpacity>
                 </View>
                 
-                <View style={styles.speedCenter}>
-                    <Text style={styles.speedText}>{Math.round(speed)}</Text>
-                    <Text style={styles.unitText}>km/h</Text>
+                <View style={styles.appsGrid}>
+                    <MenuTile icon={Music} label="Music" color="#EC4899" />
+                    <MenuTile icon={Phone} label="Phone" color="#4ADE80" />
+                    <MenuTile icon={MapPin} label="Maps" color="#60A5FA" />
+                    <MenuTile icon={Car} label="Vehicle" color="#F59E0B" />
+                    <MenuTile icon={Settings} label="Settings" color="#94A3B8" />
+                    <MenuTile icon={AlertTriangle} label="Diagnostics" color="#F87171" />
                 </View>
 
-                <View style={styles.rpmBarContainer}>
-                     <View style={[styles.rpmBarFill, { width: `${(rpm / 8000) * 100}%` }]} />
+                {/* Quick Stats in Menu */}
+                <View style={styles.quickStatsRow}>
+                    <View style={styles.statBox}>
+                        <Text style={styles.statLabel}>Range</Text>
+                        <Text style={styles.statValue}>{range} km</Text>
+                    </View>
+                    <View style={styles.statBox}>
+                        <Text style={styles.statLabel}>Fuel</Text>
+                        <Text style={styles.statValue}>{Math.round(fuelLevel)}%</Text>
+                    </View>
+                    <View style={styles.statBox}>
+                        <Text style={styles.statLabel}>Coolant</Text>
+                        <Text style={styles.statValue}>{Math.round(coolantTemp)}°C</Text>
+                    </View>
                 </View>
-                <Text style={styles.rpmText}>{Math.round(rpm)} RPM</Text>
 
-              </LinearGradient>
-            </Animated.View>
+            </SafeAreaView>
+        </Animated.View>
+      )}
 
-            {/* Trip Info */}
-            <Animated.View
-              entering={FadeInDown.delay(300).duration(600)}
-              style={[styles.mediumWidget, { flex: 1 }]}
-            >
-              <LinearGradient
-                colors={["rgba(59, 130, 246, 0.1)", "rgba(30, 41, 59, 0.6)"]}
-                style={styles.widgetGradient}
-              >
-                {isTripActive ? (
-                    <View style={styles.tripActiveInfo}>
-                        <Text style={styles.tripLabel}>Driving Score</Text>
-                        <View style={styles.scoreCircle}>
-                            <Text style={styles.scoreValue}>{Math.round(drivingScore)}</Text>
-                        </View>
-                        <Text style={styles.tripStatus}>RECORDING</Text>
-                    </View>
-                ) : (
-                    <View style={styles.tripActiveInfo}>
-                        <Text style={styles.tripLabel}>Range</Text>
-                        <Text style={styles.rangeValue}>{range} km</Text>
-                        <View style={styles.rangeBarBg}>
-                            <View style={[styles.rangeBarFill, { width: '70%' }]} />
-                        </View>
-                    </View>
-                )}
-              </LinearGradient>
-            </Animated.View>
-          </View>
-          
-          {/* Music Widget (Full Width) */}
-           <Animated.View
-              entering={FadeInDown.delay(350).duration(600)}
-              style={styles.musicWidget}
-            >
-              <LinearGradient
-                colors={["rgba(236, 72, 153, 0.1)", "rgba(30, 41, 59, 0.6)"]}
-                style={styles.musicGradient}
-              >
-                <Image
-                    source={{
-                      uri: "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=1000&auto=format&fit=crop",
-                    }}
-                    style={styles.albumArt}
-                  />
-                  <View style={styles.trackInfo}>
-                    <Text style={styles.trackTitle} numberOfLines={1}>Blinding Lights</Text>
-                    <Text style={styles.artistName}>The Weeknd</Text>
-                  </View>
-                  <View style={styles.musicControls}>
-                    <TouchableOpacity><SkipBack size={24} color="#fff" /></TouchableOpacity>
-                    <TouchableOpacity style={styles.playButton}>
-                        <Play size={24} color="#000" fill="#000" />
-                    </TouchableOpacity>
-                    <TouchableOpacity><SkipForward size={24} color="#fff" /></TouchableOpacity>
-                  </View>
-              </LinearGradient>
-            </Animated.View>
-
-          {/* App Grid */}
-          <View style={styles.appGrid}>
-            <Animated.View entering={FadeInDown.delay(400).duration(500)}>
-              <QuickAppTile icon={Phone} color="#4ADE80" label="Phone" />
-            </Animated.View>
-            <Animated.View entering={FadeInDown.delay(450).duration(500)}>
-              <QuickAppTile icon={MessageSquare} color="#60A5FA" label="Messages" />
-            </Animated.View>
-            <Animated.View entering={FadeInDown.delay(500).duration(500)}>
-              <QuickAppTile icon={Radio} color="#F472B6" label="Radio" />
-            </Animated.View>
-            <Animated.View entering={FadeInDown.delay(550).duration(500)}>
-              <QuickAppTile icon={Chrome} color="#FBBF24" label="Browser" />
-            </Animated.View>
-            <Animated.View entering={FadeInDown.delay(600).duration(500)}>
-              <QuickAppTile icon={Youtube} color="#EF4444" label="Video" />
-            </Animated.View>
-            <Animated.View entering={FadeInDown.delay(650).duration(500)}>
-              <QuickAppTile icon={Settings} color="#94A3B8" label="Settings" />
-            </Animated.View>
-            <Animated.View entering={FadeInDown.delay(700).duration(500)}>
-              <QuickAppTile icon={Calendar} color="#A78BFA" label="Calendar" />
-            </Animated.View>
-             <Animated.View entering={FadeInDown.delay(750).duration(500)}>
-              <QuickAppTile icon={Grid} color="#fff" label="Apps" />
-            </Animated.View>
-          </View>
-        </View>
-      </ScrollView>
-
-      {/* Mic/Assistant Button Floating */}
-      <TouchableOpacity style={styles.micButton}>
-        <LinearGradient
-            colors={['#3B82F6', '#2563EB']}
-            style={styles.micGradient}
-        >
-            <Mic size={28} color="#fff" />
-        </LinearGradient>
-      </TouchableOpacity>
     </View>
   );
 }
 
+const MenuTile = ({ icon: Icon, label, color }: { icon: any, label: string, color: string }) => (
+    <TouchableOpacity style={styles.menuTile}>
+        <View style={[styles.tileIcon, { backgroundColor: `${color}20` }]}>
+            <Icon size={32} color={color} />
+        </View>
+        <Text style={styles.tileLabel}>{label}</Text>
+    </TouchableOpacity>
+);
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0F172A",
+    backgroundColor: "#000",
   },
-  background: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
+  mapLayer: {
+    ...StyleSheet.absoluteFillObject,
   },
-  header: {
-    paddingHorizontal: 24,
+  mapImage: {
+    width: "100%",
+    height: "100%",
+  },
+  mapOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.3)', // Darken map slightly for legibility
+  },
+  hudContainer: {
+    flex: 1,
+  },
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
     paddingTop: 10,
-    paddingBottom: 20,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
   },
-  clockContainer: {
-    flexDirection: "column",
+  topLeftGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
-  timeText: {
-    color: "#fff",
-    fontSize: 28,
-    fontWeight: "bold",
-    fontVariant: ['tabular-nums'],
+  iconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  dateText: {
-    color: "#94A3B8",
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  statusContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-  },
-  weatherPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.1)",
+  weatherWidget: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(0,0,0,0.5)',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
-    gap: 6,
   },
-  statusText: {
-    color: "#fff",
-    fontWeight: "600",
+  weatherText: {
+    color: '#fff',
     fontSize: 14,
+    fontWeight: '600',
   },
-  statusIcons: {
-    flexDirection: "row",
-    gap: 12,
+  clockWidget: {
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 20,
   },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 120, // Space for dock
+  clockText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    fontVariant: ['tabular-nums'],
   },
-  mainGrid: {
-    gap: 16,
-  },
-  largeWidget: {
-    height: 220,
-    borderRadius: 24,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-  },
-  widgetGradient: {
-    flex: 1,
-    padding: 16,
-  },
-  mapContainer: {
-    flex: 1,
-    borderRadius: 16,
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  mapImage: {
-    width: '100%',
-    height: '100%',
-    opacity: 0.8,
-  },
-  navOverlay: {
-    position: 'absolute',
-    top: 16,
-    left: 16,
-    right: 16,
-    backgroundColor: 'rgba(15, 23, 42, 0.9)',
-    borderRadius: 16,
-    padding: 12,
+  connectivityWidget: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderLeftWidth: 4,
-    borderLeftColor: '#3B82F6',
+    gap: 12,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
   },
-  turnIconBg: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
+  navInstruction: {
+      position: 'absolute',
+      top: 80,
+      alignSelf: 'center',
+      backgroundColor: 'rgba(15, 23, 42, 0.9)',
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 16,
+      borderRadius: 16,
+      gap: 16,
+      maxWidth: width * 0.8,
+      borderLeftWidth: 4,
+      borderLeftColor: '#3B82F6',
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 6,
+  },
+  navIconBox: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
       backgroundColor: '#3B82F6',
       justifyContent: 'center',
       alignItems: 'center',
   },
-  radarAlert: {
-    position: 'absolute',
-    bottom: 16,
-    right: 16,
-    backgroundColor: 'rgba(239, 68, 68, 0.95)', // Red for alert
-    borderRadius: 12,
-    padding: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
+  navDistance: {
+      color: '#3B82F6',
+      fontSize: 24,
+      fontWeight: 'bold',
   },
-  radarIconBg: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 20,
-    padding: 4,
+  navStreet: {
+      color: '#fff',
+      fontSize: 16,
+      fontWeight: '500',
   },
-  radarTitle: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 12,
+  leftWidget: {
+      position: 'absolute',
+      bottom: 40,
+      left: 20,
+      width: 140,
+      borderRadius: 16,
+      overflow: 'hidden',
   },
-  radarDist: {
-    color: 'rgba(255,255,255,0.9)',
-    fontSize: 10,
-    fontWeight: '600',
+  rightWidget: {
+      position: 'absolute',
+      bottom: 40,
+      right: 20,
+      width: 140,
+      borderRadius: 16,
+      overflow: 'hidden',
   },
-  nextTurn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flex: 1,
+  glassPanel: {
+      padding: 12,
+      borderRadius: 16,
+      backgroundColor: 'rgba(30, 41, 59, 0.6)', // Fallback
   },
-  turnDist: {
-    color: '#3B82F6',
-    fontWeight: 'bold',
-    fontSize: 18,
+  widgetHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginBottom: 8,
   },
-  turnText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '500',
-    flexShrink: 1,
+  widgetTitle: {
+      color: '#94A3B8',
+      fontSize: 10,
+      fontWeight: 'bold',
+      letterSpacing: 1,
   },
-  row: {
-    flexDirection: "row",
-    gap: 16,
-    height: 160,
+  tpmsGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: 4,
   },
-  mediumWidget: {
-    borderRadius: 24,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(30, 41, 59, 0.4)",
+  tpmsText: {
+      color: '#fff',
+      fontSize: 12,
+      fontWeight: '600',
+      width: '40%',
+      textAlign: 'center',
   },
-  speedHeader: {
+  radarContent: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      width: '100%',
   },
-  driveMode: {
-      color: '#10B981',
+  speedLimitBox: {
+      alignItems: 'center',
+      gap: 2,
+  },
+  speedLimitCircle: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      borderWidth: 3,
+      borderColor: '#EF4444',
+      backgroundColor: '#fff',
+      justifyContent: 'center',
+      alignItems: 'center',
+  },
+  limitText: {
+      color: '#000',
+      fontSize: 16,
+      fontWeight: 'bold',
+  },
+  limitLabel: {
+      color: '#fff',
+      fontSize: 8,
+      fontWeight: 'bold',
+  },
+  cameraAlert: {
+      alignItems: 'center',
+      gap: 2,
+  },
+  cameraDist: {
+      color: '#FBBF24',
       fontSize: 12,
       fontWeight: 'bold',
-      backgroundColor: 'rgba(16, 185, 129, 0.2)',
-      paddingHorizontal: 8,
-      paddingVertical: 2,
-      borderRadius: 4,
   },
-  speedCenter: {
-      flex: 1,
-      justifyContent: 'center',
+  centerSpeed: {
+      position: 'absolute',
+      bottom: 40,
+      alignSelf: 'center',
       alignItems: 'center',
   },
-  speedText: {
+  currentSpeed: {
       color: '#fff',
-      fontSize: 48,
-      fontWeight: 'bold',
+      fontSize: 64,
+      fontWeight: '900',
       fontVariant: ['tabular-nums'],
-      lineHeight: 56,
+      textShadowColor: 'rgba(0,0,0,0.5)',
+      textShadowOffset: { width: 0, height: 2 },
+      textShadowRadius: 4,
   },
-  unitText: {
-      color: '#94A3B8',
-      fontSize: 14,
-      marginTop: -4,
+  speedUnit: {
+      color: 'rgba(255,255,255,0.7)',
+      fontSize: 16,
+      fontWeight: '600',
+      marginTop: -8,
   },
-  rpmBarContainer: {
-      width: '100%',
-      height: 6,
-      backgroundColor: 'rgba(255,255,255,0.1)',
-      borderRadius: 3,
-      marginBottom: 4,
+  emergencyBanner: {
+      position: 'absolute',
+      top: 150,
+      alignSelf: 'center',
+      width: '90%',
+      borderRadius: 16,
       overflow: 'hidden',
+      shadowColor: "#EF4444",
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.6,
+      shadowRadius: 16,
+      elevation: 10,
   },
-  rpmBarFill: {
-      height: '100%',
-      backgroundColor: '#F59E0B',
+  emergencyGradient: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 16,
+      gap: 16,
   },
-  rpmText: {
-      color: '#64748B',
-      fontSize: 10,
-      textAlign: 'right',
-  },
-  tripActiveInfo: {
+  emergencyTextContainer: {
       flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      gap: 8,
   },
-  tripLabel: {
-      color: '#94A3B8',
-      fontSize: 14,
-  },
-  scoreCircle: {
-      width: 70,
-      height: 70,
-      borderRadius: 35,
-      borderWidth: 4,
-      borderColor: '#22C55E',
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: 'rgba(34, 197, 94, 0.1)',
-  },
-  scoreValue: {
+  emergencyTitle: {
       color: '#fff',
-      fontSize: 28,
+      fontSize: 14,
+      fontWeight: 'bold',
+      letterSpacing: 1,
+  },
+  emergencyDesc: {
+      color: '#fff',
+      fontSize: 18,
       fontWeight: 'bold',
   },
-  tripStatus: {
-      color: '#EF4444',
-      fontSize: 10,
-      fontWeight: 'bold',
-      marginTop: 4,
+  dismissBtn: {
+      padding: 4,
   },
-  rangeValue: {
+  menuOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      zIndex: 50,
+  },
+  menuContent: {
+      flex: 1,
+      padding: 24,
+      justifyContent: 'center',
+  },
+  menuTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  menuHeader: {
       color: '#fff',
       fontSize: 32,
       fontWeight: 'bold',
   },
-  rangeBarBg: {
-      width: '80%',
-      height: 6,
-      backgroundColor: 'rgba(255,255,255,0.1)',
-      borderRadius: 3,
+  closeMenuBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  rangeBarFill: {
-      height: '100%',
-      backgroundColor: '#3B82F6',
-      borderRadius: 3,
-  },
-  musicWidget: {
-    height: 80,
-    borderRadius: 20,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-  },
-  musicGradient: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      padding: 12,
-      gap: 12,
-  },
-  albumArt: {
-    width: 56,
-    height: 56,
-    borderRadius: 12,
-    backgroundColor: "#333",
-  },
-  trackInfo: {
-    flex: 1,
-    justifyContent: "center",
-  },
-  trackTitle: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 16,
-    marginBottom: 4,
-  },
-  artistName: {
-    color: "#94A3B8",
-    fontSize: 14,
-  },
-  musicControls: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-    marginRight: 8,
-  },
-  playButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#fff",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  appGrid: {
+  appsGrid: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      gap: 16,
+      gap: 20,
       justifyContent: 'space-between',
   },
-  appTile: {
-      width: (width - 40 - 48) / 4, // 4 columns roughly
+  menuTile: {
+      width: (width - 48 - 40) / 3,
       aspectRatio: 1,
+      backgroundColor: 'rgba(255,255,255,0.1)',
       borderRadius: 20,
-      overflow: 'hidden',
-  },
-  appTileGradient: {
-      flex: 1,
       justifyContent: 'center',
       alignItems: 'center',
-      gap: 8,
-      borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.05)',
-      borderRadius: 20,
+      gap: 12,
   },
-  iconCircle: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
+  tileIcon: {
+      width: 56,
+      height: 56,
+      borderRadius: 28,
       justifyContent: 'center',
       alignItems: 'center',
   },
-  appLabel: {
+  tileLabel: {
       color: '#E2E8F0',
-      fontSize: 11,
+      fontSize: 14,
       fontWeight: '500',
   },
-  micButton: {
-      position: 'absolute',
-      bottom: 110,
-      right: 20,
-      width: 64,
-      height: 64,
-      borderRadius: 32,
-      shadowColor: '#3B82F6',
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 0.4,
-      shadowRadius: 12,
-      elevation: 8,
+  quickStatsRow: {
+      flexDirection: 'row',
+      marginTop: 40,
+      backgroundColor: 'rgba(0,0,0,0.3)',
+      borderRadius: 20,
+      padding: 20,
+      justifyContent: 'space-between',
   },
-  micGradient: {
-      flex: 1,
-      borderRadius: 32,
-      justifyContent: 'center',
+  statBox: {
       alignItems: 'center',
-      borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.2)',
-  }
+      gap: 4,
+  },
+  statLabel: {
+      color: '#94A3B8',
+      fontSize: 12,
+  },
+  statValue: {
+      color: '#fff',
+      fontSize: 18,
+      fontWeight: 'bold',
+  },
 });
