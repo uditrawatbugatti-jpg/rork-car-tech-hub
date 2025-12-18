@@ -7,44 +7,42 @@ import {
   TouchableOpacity,
   Animated,
   Platform,
+  Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
-import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import {
   Thermometer,
   Battery,
   Fuel,
-  Gauge,
-  Sun,
-  Moon,
-  Play,
-  Square,
   Clock,
-  Navigation,
 } from 'lucide-react-native';
 
 import { useCar } from '@/context/CarContext';
 import { GaugeArc } from '@/components/drive/GaugeArc';
 import { SpeedReadout } from '@/components/drive/SpeedReadout';
-import { StatusPill } from '@/components/drive/StatusPill';
 import { AlertBanner } from '@/components/drive/AlertBanner';
-import { TelemetryTile } from '@/components/drive/TelemetryTile';
 import {
-  DriveTheme,
   getSpeedStatus,
   getRpmStatus,
   getCoolantStatus,
-  getBatteryStatus,
   getFuelStatus,
 } from '@/constants/driveTheme';
 
-const { width, height } = Dimensions.get('window');
-const GAUGE_SIZE = Math.min(width * 0.85, 340);
-const MINI_GAUGE_SIZE = 100;
+const { width } = Dimensions.get('window');
+const GAUGE_SIZE = Math.min(width * 0.45, 280); // Two gauges side by side-ish
+const CAR_IMAGE_URL = "https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/x4qaew12odomt5x8vik4h";
 
-type ThemeMode = 'night' | 'day';
+// Standard "Bracket" gauge angles (Clockwise from 12 o'clock)
+// Left Gauge (Speed): Starts at ~7 o'clock (210deg) and ends at ~11 o'clock (330deg)
+const SPEED_START = 210;
+const SPEED_END = 330;
+
+// Right Gauge (RPM): We will render it as a standard gauge but flip it horizontally
+// So we use the same angles as Speed gauge!
+const RPM_START = 210;
+const RPM_END = 330;
 
 export default function DriveScreen() {
   const {
@@ -59,41 +57,38 @@ export default function DriveScreen() {
     isTripActive,
     tripDuration,
     tripDistance,
-    drivingScore,
     startTrip,
     stopTrip,
     accelerate,
     brake,
   } = useCar();
 
-  const [themeMode, setThemeMode] = useState<ThemeMode>('night');
   const [time, setTime] = useState(new Date());
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
 
-  const carImageOpacity = useRef(new Animated.Value(0)).current;
-  const screenFadeIn = useRef(new Animated.Value(0)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(20)).current;
 
   const speedStatus = getSpeedStatus(speed);
   const rpmStatus = getRpmStatus(rpm);
   const coolantStatus = getCoolantStatus(coolantTemp);
-  const batteryStatus = getBatteryStatus(batteryVoltage);
   const fuelStatus = getFuelStatus(fuelLevel);
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(screenFadeIn, {
+      Animated.timing(fadeAnim, {
         toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
         duration: 800,
         useNativeDriver: true,
       }),
-      Animated.timing(carImageOpacity, {
-        toValue: 0.12,
-        duration: 1200,
-        useNativeDriver: true,
-      }),
     ]).start();
-  }, [screenFadeIn, carImageOpacity]);
+  }, [fadeAnim, slideAnim]);
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
@@ -101,33 +96,23 @@ export default function DriveScreen() {
   }, []);
 
   useEffect(() => {
+    // Alert logic
     if (coolantStatus === 'critical') {
-      setAlertMessage('ENGINE OVERHEATING - Pull over safely');
+      setAlertMessage('ENGINE OVERHEAT');
       setShowAlert(true);
-      if (Platform.OS !== 'web') {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      }
     } else if (fuelStatus === 'critical') {
-      setAlertMessage('LOW FUEL - Find nearest station');
+      setAlertMessage('LOW FUEL LEVEL');
       setShowAlert(true);
-      if (Platform.OS !== 'web') {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-      }
     } else if (speedStatus === 'critical') {
-      setAlertMessage('EXCESSIVE SPEED - Reduce immediately');
+      setAlertMessage('REDUCE SPEED');
       setShowAlert(true);
-      if (Platform.OS !== 'web') {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-      }
     } else {
       setShowAlert(false);
     }
   }, [coolantStatus, fuelStatus, speedStatus]);
 
   const handleTripToggle = useCallback(() => {
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    }
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     if (isTripActive) {
       stopTrip();
     } else {
@@ -136,275 +121,191 @@ export default function DriveScreen() {
   }, [isTripActive, startTrip, stopTrip]);
 
   const handleAccelerate = useCallback(() => {
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     accelerate();
   }, [accelerate]);
 
   const handleBrake = useCallback(() => {
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    }
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     brake();
   }, [brake]);
 
-  const toggleTheme = useCallback(() => {
-    if (Platform.OS !== 'web') {
-      Haptics.selectionAsync();
-    }
-    setThemeMode((prev) => (prev === 'night' ? 'day' : 'night'));
-  }, []);
-
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
-
-  const formatTripDuration = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const isDayMode = themeMode === 'day';
-  const bgColors: readonly [string, string, string] = isDayMode
-    ? ['#1a1a2e', '#16213e', '#0f0f1a']
-    : ['#0A0A0F', '#08080C', '#050508'];
+  const formatTime = (date: Date) => date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   return (
     <View style={styles.container}>
-      <StatusBar style="light" />
-
-      <LinearGradient colors={bgColors} style={styles.background} />
-
-      <Animated.Image
-        source={{
-          uri: 'https://imgd.aeplcdn.com/664x374/cw/ec/21aborning/Honda-Amaze-Front-view-30625.jpg',
-        }}
-        style={[
-          styles.carBackgroundImage,
-          {
-            opacity: carImageOpacity,
-          },
-        ]}
-        resizeMode="cover"
-        blurRadius={Platform.OS === 'web' ? 0 : 2}
-      />
-
+      <StatusBar style="light" hidden />
+      
+      {/* Premium Gradient Background */}
       <LinearGradient
-        colors={['rgba(10,10,15,0.3)', 'rgba(10,10,15,0.95)', 'rgba(10,10,15,1)']}
-        style={styles.imageOverlay}
+        colors={['#020617', '#0F172A', '#172554', '#020617']}
+        locations={[0, 0.4, 0.8, 1]}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+        style={styles.background}
       />
 
-      <Animated.View style={[styles.content, { opacity: screenFadeIn }]}>
-        <View style={styles.topBar}>
-          <View style={styles.clockContainer}>
-            <Clock size={14} color={DriveTheme.colors.text.tertiary} />
-            <Text style={styles.clockText}>{formatTime(time)}</Text>
-          </View>
+      {/* Grid Pattern Overlay */}
+      <View style={styles.gridOverlay}>
+        <View style={styles.horizonLine} />
+        <LinearGradient
+          colors={['transparent', 'rgba(59, 130, 246, 0.1)', 'transparent']}
+          style={styles.floorGradient}
+        />
+      </View>
 
-          <View style={styles.carBadge}>
-            <Text style={styles.carBadgeText}>
-              {vehicleProfile.make} {vehicleProfile.model}
-            </Text>
-          </View>
+      <Animated.View style={[styles.content, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+        
+        {/* Header: Time, Temp, Alerts */}
+        <View style={styles.header}>
+           <View style={styles.headerItem}>
+             <Clock size={16} color="#94A3B8" />
+             <Text style={styles.headerText}>{formatTime(time)}</Text>
+           </View>
+           
+           <View style={styles.alertZone}>
+             <AlertBanner 
+               message={alertMessage} 
+               status="critical" 
+               visible={showAlert} 
+               onDismiss={() => setShowAlert(false)} 
+             />
+           </View>
 
-          <TouchableOpacity onPress={toggleTheme} style={styles.themeButton}>
-            {isDayMode ? (
-              <Moon size={20} color={DriveTheme.colors.text.secondary} />
-            ) : (
-              <Sun size={20} color={DriveTheme.colors.text.secondary} />
-            )}
-          </TouchableOpacity>
+           <View style={styles.headerItem}>
+             <Thermometer size={16} color="#94A3B8" />
+             <Text style={styles.headerText}>24°C</Text>
+           </View>
         </View>
 
-        <View style={styles.alertContainer}>
-          <AlertBanner
-            message={alertMessage}
-            status={coolantStatus === 'critical' ? 'critical' : speedStatus === 'critical' ? 'critical' : 'warning'}
-            visible={showAlert}
-            onDismiss={() => setShowAlert(false)}
-          />
-        </View>
-
-        <View style={styles.mainGaugeContainer}>
-          <View style={styles.rpmGaugeContainer}>
-            <GaugeArc
-              value={rpm}
-              maxValue={8000}
-              size={MINI_GAUGE_SIZE}
-              strokeWidth={6}
-              status={rpmStatus}
-              showGlow={false}
-            />
-            <View style={styles.miniGaugeLabel}>
-              <Text style={styles.miniGaugeValue}>{Math.round(rpm / 100)}</Text>
-              <Text style={styles.miniGaugeUnit}>×100</Text>
-            </View>
-          </View>
-
-          <View style={styles.speedGaugeWrapper}>
-            <GaugeArc
-              value={speed}
-              maxValue={240}
-              size={GAUGE_SIZE}
-              strokeWidth={10}
-              status={speedStatus}
-              gradientColors={
-                speedStatus === 'critical'
-                  ? [DriveTheme.colors.gauge.speedCritical, DriveTheme.colors.accent.warm] as [string, string]
-                  : speedStatus === 'warning'
-                  ? [DriveTheme.colors.gauge.speedWarning, DriveTheme.colors.accent.warm] as [string, string]
-                  : [DriveTheme.colors.gauge.speedNormal, DriveTheme.colors.accent.primary] as [string, string]
-              }
-            />
-            <View style={styles.speedReadoutContainer}>
-              <SpeedReadout speed={speed} status={speedStatus} size="medium" />
-            </View>
-          </View>
-
-          <View style={styles.fuelGaugeContainer}>
-            <GaugeArc
-              value={fuelLevel}
-              maxValue={100}
-              size={MINI_GAUGE_SIZE}
-              strokeWidth={6}
-              status={fuelStatus}
-              startAngle={-180}
-              endAngle={0}
-              showGlow={false}
-            />
-            <View style={styles.miniGaugeLabel}>
-              <Fuel size={16} color={DriveTheme.colors.text.secondary} />
-              <Text style={styles.miniGaugeValue}>{Math.round(fuelLevel)}%</Text>
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.gearDisplay}>
-          {['P', 'R', 'N', 'D'].map((g) => (
-            <View
-              key={g}
-              style={[
-                styles.gearItem,
-                gear === g && styles.gearItemActive,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.gearText,
-                  gear === g && styles.gearTextActive,
-                ]}
-              >
-                {g}
-              </Text>
-            </View>
-          ))}
-        </View>
-
-        <View style={styles.telemetryRow}>
-          <TelemetryTile
-            label="Coolant"
-            value={coolantTemp}
-            unit="°C"
-            icon={<Thermometer size={18} color={getCoolantStatus(coolantTemp) === 'normal' ? DriveTheme.colors.status.normal : DriveTheme.colors.status.warning} />}
-            status={coolantStatus}
-            mini
-          />
-          <TelemetryTile
-            label="Battery"
-            value={batteryVoltage}
-            unit="V"
-            icon={<Battery size={18} color={getBatteryStatus(batteryVoltage) === 'normal' ? DriveTheme.colors.status.normal : DriveTheme.colors.status.warning} />}
-            status={batteryStatus}
-            mini
-          />
-          <TelemetryTile
-            label="Range"
-            value={range}
-            unit="km"
-            icon={<Navigation size={18} color={DriveTheme.colors.accent.primary} />}
-            status="normal"
-            mini
-          />
-        </View>
-
-        <View style={styles.tripSection}>
-          {isTripActive ? (
-            <View style={styles.tripActiveContainer}>
-              <StatusPill
-                label="Trip Time"
-                value={formatTripDuration(tripDuration)}
-                status="normal"
-                compact
+        {/* Main Cockpit Area */}
+        <View style={styles.cockpit}>
+          
+          {/* Left Gauge: Speed */}
+          <View style={styles.gaugeColumn}>
+            <View style={styles.gaugeWrapper}>
+              <GaugeArc
+                value={speed}
+                maxValue={240}
+                size={GAUGE_SIZE}
+                strokeWidth={16}
+                startAngle={SPEED_START}
+                endAngle={SPEED_END}
+                status={speedStatus}
+                gradientColors={['#3B82F6', '#60A5FA']}
               />
-              <StatusPill
-                label="Distance"
-                value={`${tripDistance.toFixed(1)} km`}
-                status="normal"
-                compact
-              />
-              <StatusPill
-                label="Score"
-                value={Math.round(drivingScore)}
-                status={drivingScore > 80 ? 'normal' : drivingScore > 50 ? 'warning' : 'critical'}
-                compact
-              />
-            </View>
-          ) : (
-            <View style={styles.odometerContainer}>
-              <Gauge size={14} color={DriveTheme.colors.text.tertiary} />
-              <Text style={styles.odometerText}>
-                {vehicleProfile.odometer.toLocaleString()} km
-              </Text>
-            </View>
-          )}
-        </View>
-
-        <View style={styles.controlsRow}>
-          <TouchableOpacity
-            onPress={handleBrake}
-            style={[styles.controlButton, styles.brakeButton]}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.controlButtonText}>BRAKE</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={handleTripToggle}
-            style={[
-              styles.tripButton,
-              isTripActive && styles.tripButtonActive,
-            ]}
-            activeOpacity={0.8}
-          >
-            {Platform.OS !== 'web' ? (
-              <BlurView intensity={30} tint="dark" style={styles.tripButtonBlur}>
-                {isTripActive ? (
-                  <Square size={24} color={DriveTheme.colors.status.critical} fill={DriveTheme.colors.status.critical} />
-                ) : (
-                  <Play size={24} color={DriveTheme.colors.status.normal} fill={DriveTheme.colors.status.normal} />
-                )}
-              </BlurView>
-            ) : (
-              <View style={[styles.tripButtonBlur, styles.tripButtonWeb]}>
-                {isTripActive ? (
-                  <Square size={24} color={DriveTheme.colors.status.critical} fill={DriveTheme.colors.status.critical} />
-                ) : (
-                  <Play size={24} color={DriveTheme.colors.status.normal} fill={DriveTheme.colors.status.normal} />
-                )}
+              <View style={styles.gaugeInnerLeft}>
+                <SpeedReadout speed={speed} size="large" />
               </View>
-            )}
-          </TouchableOpacity>
+            </View>
+             <View style={styles.infoPill}>
+                <Fuel size={14} color={fuelStatus === 'critical' ? '#EF4444' : '#10B981'} />
+                <Text style={styles.infoPillText}>{Math.round(fuelLevel)}%</Text>
+             </View>
+          </View>
 
-          <TouchableOpacity
-            onPress={handleAccelerate}
-            style={[styles.controlButton, styles.accelButton]}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.controlButtonText}>ACCEL</Text>
-          </TouchableOpacity>
+          {/* Center: Car Visualization */}
+          <View style={styles.centerStage}>
+             <View style={styles.carGlow} />
+             <Image 
+                source={{ uri: CAR_IMAGE_URL }} 
+                style={styles.centerCarImage}
+                resizeMode="contain"
+             />
+             
+             {/* Dynamic Drive Info under car */}
+             <View style={styles.driveInfo}>
+                <View style={styles.gearContainer}>
+                   <Text style={[styles.gearText, gear === 'P' && styles.activeGear]}>P</Text>
+                   <Text style={[styles.gearText, gear === 'R' && styles.activeGear]}>R</Text>
+                   <Text style={[styles.gearText, gear === 'N' && styles.activeGear]}>N</Text>
+                   <View style={[styles.activeGearBox, gear === 'D' && styles.activeGearBoxVisible]}>
+                      <Text style={[styles.gearText, gear === 'D' && styles.activeGear]}>D</Text>
+                   </View>
+                </View>
+
+                {isTripActive && (
+                  <View style={styles.tripStats}>
+                     <Text style={styles.tripText}>{tripDistance.toFixed(1)} km</Text>
+                     <Text style={styles.tripTextSeparator}>•</Text>
+                     <Text style={styles.tripText}>{Math.floor(tripDuration / 60)} min</Text>
+                  </View>
+                )}
+             </View>
+          </View>
+
+          {/* Right Gauge: RPM / Power */}
+          <View style={styles.gaugeColumn}>
+            <View style={styles.gaugeWrapper}>
+              {/* Mirrored GaugeArc to create the "Bracket" effect */}
+              <View style={{ transform: [{ scaleX: -1 }] }}>
+                <GaugeArc
+                  value={rpm}
+                  maxValue={8000}
+                  size={GAUGE_SIZE}
+                  strokeWidth={16}
+                  startAngle={RPM_START}
+                  endAngle={RPM_END}
+                  status={rpmStatus}
+                  gradientColors={['#F59E0B', '#EF4444']}
+                />
+              </View>
+              <View style={styles.gaugeInnerRight}>
+                 <Text style={styles.rpmValue}>{Math.round(rpm)}</Text>
+                 <Text style={styles.rpmLabel}>RPM</Text>
+              </View>
+            </View>
+            <View style={styles.infoPill}>
+                <Battery size={14} color="#F59E0B" />
+                <Text style={styles.infoPillText}>{batteryVoltage}V</Text>
+             </View>
+          </View>
+
         </View>
+
+        {/* Bottom Controls / Status */}
+        <View style={styles.footer}>
+           
+           <TouchableOpacity 
+             onPress={handleBrake} 
+             activeOpacity={0.8}
+             style={styles.pedalButton}
+           >
+              <View style={[styles.pedal, styles.brakePedal]}>
+                 <Text style={styles.pedalText}>BRAKE</Text>
+              </View>
+           </TouchableOpacity>
+
+           <TouchableOpacity 
+             onPress={handleTripToggle} 
+             activeOpacity={0.8}
+             style={styles.startButtonWrapper}
+           >
+              <LinearGradient
+                colors={isTripActive ? ['#EF4444', '#991B1B'] : ['#22C55E', '#166534']}
+                style={styles.startButton}
+              >
+                 <Text style={styles.startButtonText}>{isTripActive ? 'STOP' : 'START'}</Text>
+              </LinearGradient>
+           </TouchableOpacity>
+
+           <TouchableOpacity 
+             onPress={handleAccelerate} 
+             activeOpacity={0.8}
+             style={styles.pedalButton}
+           >
+              <View style={[styles.pedal, styles.accelPedal]}>
+                 <Text style={styles.pedalText}>GAS</Text>
+              </View>
+           </TouchableOpacity>
+
+        </View>
+
+        <View style={styles.footerInfo}>
+           <Text style={styles.rangeText}>RANGE: {range} KM</Text>
+           <Text style={styles.odoText}>ODO: {vehicleProfile.odometer.toLocaleString()} KM</Text>
+        </View>
+
       </Animated.View>
     </View>
   );
@@ -413,226 +314,276 @@ export default function DriveScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: DriveTheme.colors.background.primary,
+    backgroundColor: '#020617',
   },
   background: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  gridOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+  },
+  horizonLine: {
+    height: 1,
+    backgroundColor: 'rgba(59, 130, 246, 0.3)',
+    width: '100%',
     position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
+    top: '55%',
+  },
+  floorGradient: {
+    position: 'absolute',
+    top: '55%',
     bottom: 0,
-  },
-  carBackgroundImage: {
-    position: 'absolute',
-    width: width,
-    height: height * 0.5,
-    top: 0,
-  },
-  imageOverlay: {
-    position: 'absolute',
     left: 0,
     right: 0,
-    top: 0,
-    height: height * 0.6,
   },
   content: {
     flex: 1,
-    paddingTop: 50,
+    paddingTop: Platform.OS === 'android' ? 40 : 20,
+    paddingBottom: 20,
   },
-  topBar: {
+  header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 8,
+    paddingHorizontal: 24,
+    height: 50,
   },
-  clockContainer: {
+  headerItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-  },
-  clockText: {
-    color: DriveTheme.colors.text.secondary,
-    fontSize: 14,
-    fontWeight: '500',
-    fontVariant: ['tabular-nums'],
-  },
-  carBadge: {
-    backgroundColor: DriveTheme.colors.background.glass,
+    gap: 8,
+    backgroundColor: 'rgba(15, 23, 42, 0.6)',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(148, 163, 184, 0.2)',
   },
-  carBadgeText: {
-    color: DriveTheme.colors.text.secondary,
-    fontSize: 11,
+  headerText: {
+    color: '#E2E8F0',
+    fontSize: 14,
     fontWeight: '600',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
+    fontVariant: ['tabular-nums'],
   },
-  themeButton: {
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: DriveTheme.colors.background.glass,
-  },
-  alertContainer: {
+  alertZone: {
+    flex: 1,
     paddingHorizontal: 20,
-    marginBottom: 8,
+    alignItems: 'center',
   },
-  mainGaugeContainer: {
+  cockpit: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 10,
+    marginTop: 20,
   },
-  speedGaugeWrapper: {
+  gaugeColumn: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 20,
+  },
+  gaugeWrapper: {
     position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  speedReadoutContainer: {
+  gaugeInnerLeft: {
     position: 'absolute',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  rpmGaugeContainer: {
-    alignItems: 'center',
-    marginRight: -20,
-    zIndex: 1,
-  },
-  fuelGaugeContainer: {
-    alignItems: 'center',
-    marginLeft: -20,
-    zIndex: 1,
-  },
-  miniGaugeLabel: {
+  gaugeInnerRight: {
     position: 'absolute',
     alignItems: 'center',
     justifyContent: 'center',
-    top: '35%',
   },
-  miniGaugeValue: {
-    color: DriveTheme.colors.text.primary,
-    fontSize: 18,
+  rpmValue: {
+    fontSize: 42,
+    fontWeight: 'bold',
+    color: '#F8FAFC',
+    fontVariant: ['tabular-nums'],
+    textShadowColor: 'rgba(245, 158, 11, 0.5)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 10,
+  },
+  rpmLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#94A3B8',
+    marginTop: 0,
+    letterSpacing: 1,
+  },
+  infoPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(30, 41, 59, 0.6)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 100,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  infoPillText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  centerStage: {
+    flex: 1.2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+    height: '100%',
+    paddingBottom: 40,
+  },
+  carGlow: {
+    position: 'absolute',
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: 'rgba(59, 130, 246, 0.15)',
+    ...Platform.select({
+      web: {
+        filter: 'blur(40px)',
+      },
+      ios: {
+        shadowColor: '#3B82F6',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.5,
+        shadowRadius: 40,
+      },
+    }),
+  },
+  centerCarImage: {
+    width: '140%',
+    height: 180,
+    marginBottom: 20,
+  },
+  driveInfo: {
+    alignItems: 'center',
+    gap: 16,
+  },
+  gearContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(2, 6, 23, 0.8)',
+    borderRadius: 16,
+    padding: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  gearText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#64748B',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+  },
+  activeGear: {
+    color: '#fff',
+  },
+  activeGearBox: {
+    borderRadius: 12,
+  },
+  activeGearBoxVisible: {
+    backgroundColor: '#3B82F6',
+    shadowColor: '#3B82F6',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  tripStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  tripText: {
+    color: '#94A3B8',
+    fontSize: 14,
     fontWeight: '600',
     fontVariant: ['tabular-nums'],
   },
-  miniGaugeUnit: {
-    color: DriveTheme.colors.text.tertiary,
-    fontSize: 9,
-    fontWeight: '500',
-    marginTop: 2,
+  tripTextSeparator: {
+    color: '#475569',
   },
-  gearDisplay: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 8,
-    marginTop: 16,
-    marginBottom: 16,
-  },
-  gearItem: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    backgroundColor: DriveTheme.colors.background.glass,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-  },
-  gearItemActive: {
-    backgroundColor: DriveTheme.colors.accent.primary,
-    borderColor: DriveTheme.colors.accent.primary,
-  },
-  gearText: {
-    color: DriveTheme.colors.text.tertiary,
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  gearTextActive: {
-    color: DriveTheme.colors.background.primary,
-  },
-  telemetryRow: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    gap: 8,
-  },
-  tripSection: {
-    paddingHorizontal: 20,
-    marginTop: 16,
-  },
-  tripActiveContainer: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  odometerContainer: {
+  footer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    backgroundColor: DriveTheme.colors.background.glass,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-  },
-  odometerText: {
-    color: DriveTheme.colors.text.secondary,
-    fontSize: 14,
-    fontWeight: '500',
-    fontVariant: ['tabular-nums'],
-  },
-  controlsRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
+    paddingHorizontal: 24,
     gap: 20,
-    marginTop: 'auto',
-    paddingBottom: 120,
-    paddingHorizontal: 20,
+    marginBottom: 10,
   },
-  controlButton: {
+  pedalButton: {
     flex: 1,
-    paddingVertical: 16,
-    borderRadius: 16,
-    alignItems: 'center',
+    height: 60,
+  },
+  pedal: {
+    flex: 1,
+    borderRadius: 12,
     justifyContent: 'center',
-  },
-  brakeButton: {
-    backgroundColor: 'rgba(255, 59, 92, 0.15)',
+    alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 59, 92, 0.3)',
+    borderBottomWidth: 4,
   },
-  accelButton: {
-    backgroundColor: 'rgba(0, 255, 148, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(0, 255, 148, 0.3)',
+  brakePedal: {
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderColor: 'rgba(239, 68, 68, 0.5)',
   },
-  controlButtonText: {
-    color: DriveTheme.colors.text.primary,
+  accelPedal: {
+    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+    borderColor: 'rgba(34, 197, 94, 0.5)',
+  },
+  pedalText: {
+    color: '#fff',
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '800',
     letterSpacing: 2,
   },
-  tripButton: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+  startButtonWrapper: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
     overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: DriveTheme.colors.status.normal,
+    borderWidth: 4,
+    borderColor: '#1E293B',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    elevation: 5,
   },
-  tripButtonActive: {
-    borderColor: DriveTheme.colors.status.critical,
-  },
-  tripButtonBlur: {
+  startButton: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  tripButtonWeb: {
-    backgroundColor: DriveTheme.colors.background.glass,
+  startButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+  footerInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 40,
+    marginTop: 10,
+  },
+  rangeText: {
+    color: '#64748B',
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 1,
+  },
+  odoText: {
+    color: '#64748B',
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 1,
   },
 });
