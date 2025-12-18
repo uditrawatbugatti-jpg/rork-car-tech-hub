@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { View, Text, StyleSheet, Image, Animated, TouchableOpacity, Dimensions } from "react-native";
+import { View, Text, StyleSheet, Animated, TouchableOpacity, Dimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
@@ -60,31 +60,6 @@ const GaugeWidget = ({ label, value, unit, icon: Icon, color, max, warning }: {
   );
 };
 
-const TireWidget = ({ position, pressure, temp }: { position: string; pressure: number; temp: number }) => {
-  const isLow = pressure < 30;
-  const isHigh = pressure > 36;
-  const statusColor = isLow ? "#EF4444" : isHigh ? "#F59E0B" : "#22C55E";
-  
-  return (
-    <View style={[styles.tireCard, (isLow || isHigh) && styles.tireAlert]}>
-      <View style={styles.tireHeader}>
-        <Text style={styles.tirePos}>{position}</Text>
-        {isLow || isHigh ? (
-          <AlertCircle size={12} color={statusColor} />
-        ) : (
-          <CheckCircle2 size={12} color={statusColor} />
-        )}
-      </View>
-      <Text style={[styles.pressureText, { color: statusColor }]}>
-        {pressure} <Text style={styles.unitText}>PSI</Text>
-      </Text>
-      <View style={styles.tempRow}>
-        <Thermometer size={10} color="#64748B" />
-        <Text style={styles.tempText}>{temp}°C</Text>
-      </View>
-    </View>
-  );
-};
 
 const SpecItem = ({ label, value }: { label: string; value: string }) => (
   <View style={styles.specItem}>
@@ -95,8 +70,7 @@ const SpecItem = ({ label, value }: { label: string; value: string }) => (
 
 export default function VehicleScreen() {
   const { 
-    vehicleProfile,
-    tpms, 
+    vehicleProfile, 
     fuelLevel, 
     range, 
     coolantTemp, 
@@ -110,7 +84,7 @@ export default function VehicleScreen() {
   
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
-  const [activeTab, setActiveTab] = useState<'profile' | 'obd' | 'tires'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'obd'>('profile');
 
   useEffect(() => {
     Animated.parallel([
@@ -151,17 +125,16 @@ export default function VehicleScreen() {
       </View>
 
       <View style={styles.tabContainer}>
-        {(['profile', 'obd', 'tires'] as const).map((tab) => (
+        {(['profile', 'obd'] as const).map((tab) => (
           <TouchableOpacity 
             key={tab}
             style={[styles.tab, activeTab === tab && styles.activeTab]} 
             onPress={() => setActiveTab(tab)}
           >
-            {tab === 'profile' && <Car size={16} color={activeTab === tab ? '#fff' : '#64748B'} />}
-            {tab === 'obd' && <Activity size={16} color={activeTab === tab ? '#fff' : '#64748B'} />}
-            {tab === 'tires' && <Gauge size={16} color={activeTab === tab ? '#fff' : '#64748B'} />}
+            {activeTab === 'profile' && <Car size={16} color={activeTab === tab ? '#fff' : '#64748B'} />}
+            {activeTab === 'obd' && <Activity size={16} color={activeTab === tab ? '#fff' : '#64748B'} />}
             <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
-              {tab === 'profile' ? 'Profile' : tab === 'obd' ? 'Live Data' : 'TPMS'}
+              {tab === 'profile' ? 'Profile' : 'Live Data'}
             </Text>
           </TouchableOpacity>
         ))}
@@ -375,59 +348,7 @@ export default function VehicleScreen() {
           </View>
         )}
 
-        {activeTab === 'tires' && (
-          <View style={styles.tpmsContainer}>
-            <View style={styles.tpmsHeader}>
-              <Text style={styles.tpmsTitle}>Blaupunkt TPMS</Text>
-              <View style={styles.tpmsBadge}>
-                <CheckCircle2 size={14} color="#22C55E" />
-                <Text style={styles.tpmsBadgeText}>All Normal</Text>
-              </View>
-            </View>
 
-            <View style={styles.carTPMSDisplay}>
-              <View style={styles.tiresTopRow}>
-                <TireWidget position="FL" pressure={tpms.fl} temp={tpms.temperature} />
-                <TireWidget position="FR" pressure={tpms.fr} temp={tpms.temperature} />
-              </View>
-
-              <View style={styles.carOutline}>
-                <LinearGradient
-                  colors={["rgba(59, 130, 246, 0.1)", "transparent"]}
-                  style={styles.carOutlineGradient}
-                >
-                  <Image 
-                    source={{ uri: "https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?q=80&w=800&auto=format&fit=crop" }} 
-                    style={styles.carTopView}
-                    resizeMode="contain"
-                  />
-                </LinearGradient>
-              </View>
-
-              <View style={styles.tiresBottomRow}>
-                <TireWidget position="RL" pressure={tpms.rl} temp={tpms.temperature} />
-                <TireWidget position="RR" pressure={tpms.rr} temp={tpms.temperature} />
-              </View>
-            </View>
-
-            <View style={styles.tpmsInfoCard}>
-              <View style={styles.tpmsInfoRow}>
-                <Text style={styles.tpmsInfoLabel}>Recommended Pressure</Text>
-                <Text style={styles.tpmsInfoValue}>32-33 PSI</Text>
-              </View>
-              <View style={styles.tpmsInfoDivider} />
-              <View style={styles.tpmsInfoRow}>
-                <Text style={styles.tpmsInfoLabel}>Tire Temperature</Text>
-                <Text style={styles.tpmsInfoValue}>{tpms.temperature}°C (Normal)</Text>
-              </View>
-              <View style={styles.tpmsInfoDivider} />
-              <View style={styles.tpmsInfoRow}>
-                <Text style={styles.tpmsInfoLabel}>Last Updated</Text>
-                <Text style={styles.tpmsInfoValue}>Just now</Text>
-              </View>
-            </View>
-          </View>
-        )}
       </Animated.ScrollView>
     </SafeAreaView>
   );
@@ -978,134 +899,5 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 14,
   },
-  tpmsContainer: {
-    gap: 20,
-  },
-  tpmsHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  tpmsTitle: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  tpmsBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(34, 197, 94, 0.1)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  tpmsBadgeText: {
-    color: '#22C55E',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  carTPMSDisplay: {
-    alignItems: 'center',
-    gap: 16,
-  },
-  tiresTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-    paddingHorizontal: 30,
-  },
-  tiresBottomRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-    paddingHorizontal: 30,
-  },
-  carOutline: {
-    width: '100%',
-    height: 160,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  carOutlineGradient: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 20,
-  },
-  carTopView: {
-    width: 120,
-    height: 200,
-    opacity: 0.7,
-  },
-  tireCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    width: 100,
-    padding: 14,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    alignItems: 'center',
-  },
-  tireAlert: {
-    borderColor: 'rgba(239, 68, 68, 0.3)',
-    backgroundColor: 'rgba(239, 68, 68, 0.05)',
-  },
-  tireHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    width: '100%',
-    marginBottom: 8,
-  },
-  tirePos: {
-    color: '#94A3B8',
-    fontWeight: 'bold',
-    fontSize: 12,
-  },
-  pressureText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  unitText: {
-    fontSize: 10,
-    color: '#64748B',
-  },
-  tempRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 6,
-  },
-  tempText: {
-    color: '#64748B',
-    fontSize: 11,
-  },
-  tpmsInfoCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    borderRadius: 20,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
-  },
-  tpmsInfoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 10,
-  },
-  tpmsInfoLabel: {
-    color: '#64748B',
-    fontSize: 14,
-  },
-  tpmsInfoValue: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  tpmsInfoDivider: {
-    height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-  },
+
 });
