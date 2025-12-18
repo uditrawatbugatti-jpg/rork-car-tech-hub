@@ -1,17 +1,15 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   Dimensions,
-  TouchableOpacity,
   Animated,
   Platform,
   Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
-import * as Haptics from 'expo-haptics';
 import {
   Thermometer,
   Battery,
@@ -57,10 +55,6 @@ export default function DriveScreen() {
     isTripActive,
     tripDuration,
     tripDistance,
-    startTrip,
-    stopTrip,
-    accelerate,
-    brake,
   } = useCar();
 
   const [time, setTime] = useState(new Date());
@@ -110,25 +104,6 @@ export default function DriveScreen() {
       setShowAlert(false);
     }
   }, [coolantStatus, fuelStatus, speedStatus]);
-
-  const handleTripToggle = useCallback(() => {
-    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    if (isTripActive) {
-      stopTrip();
-    } else {
-      startTrip();
-    }
-  }, [isTripActive, startTrip, stopTrip]);
-
-  const handleAccelerate = useCallback(() => {
-    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    accelerate();
-  }, [accelerate]);
-
-  const handleBrake = useCallback(() => {
-    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    brake();
-  }, [brake]);
 
   const formatTime = (date: Date) => date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
@@ -263,44 +238,8 @@ export default function DriveScreen() {
 
         </View>
 
-        {/* Bottom Controls / Status */}
-        <View style={styles.footer}>
-           
-           <TouchableOpacity 
-             onPress={handleBrake} 
-             activeOpacity={0.8}
-             style={styles.pedalButton}
-           >
-              <View style={[styles.pedal, styles.brakePedal]}>
-                 <Text style={styles.pedalText}>BRAKE</Text>
-              </View>
-           </TouchableOpacity>
-
-           <TouchableOpacity 
-             onPress={handleTripToggle} 
-             activeOpacity={0.8}
-             style={styles.startButtonWrapper}
-           >
-              <LinearGradient
-                colors={isTripActive ? ['#EF4444', '#991B1B'] : ['#22C55E', '#166534']}
-                style={styles.startButton}
-              >
-                 <Text style={styles.startButtonText}>{isTripActive ? 'STOP' : 'START'}</Text>
-              </LinearGradient>
-           </TouchableOpacity>
-
-           <TouchableOpacity 
-             onPress={handleAccelerate} 
-             activeOpacity={0.8}
-             style={styles.pedalButton}
-           >
-              <View style={[styles.pedal, styles.accelPedal]}>
-                 <Text style={styles.pedalText}>GAS</Text>
-              </View>
-           </TouchableOpacity>
-
-        </View>
-
+        {/* Bottom Controls / Status - Removed pedals */}
+        
         <View style={styles.footerInfo}>
            <Text style={styles.rangeText}>RANGE: {range} KM</Text>
            <Text style={styles.odoText}>ODO: {vehicleProfile.odometer.toLocaleString()} KM</Text>
@@ -509,64 +448,6 @@ const styles = StyleSheet.create({
   },
   tripTextSeparator: {
     color: '#475569',
-  },
-  footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-    gap: 20,
-    marginBottom: 10,
-  },
-  pedalButton: {
-    flex: 1,
-    height: 60,
-  },
-  pedal: {
-    flex: 1,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderBottomWidth: 4,
-  },
-  brakePedal: {
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    borderColor: 'rgba(239, 68, 68, 0.5)',
-  },
-  accelPedal: {
-    backgroundColor: 'rgba(34, 197, 94, 0.1)',
-    borderColor: 'rgba(34, 197, 94, 0.5)',
-  },
-  pedalText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 2,
-  },
-  startButtonWrapper: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    overflow: 'hidden',
-    borderWidth: 4,
-    borderColor: '#1E293B',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  startButton: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  startButtonText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '900',
-    letterSpacing: 1,
   },
   footerInfo: {
     flexDirection: 'row',
